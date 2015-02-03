@@ -1,0 +1,10 @@
+--allow-all-external
+-f http://cairographics.org/releases/
+-f http://dist.plone.org/thirdparty/
+--allow-unverified cherrypy
+--allow-unverified genshi
+--allow-unverified mongodb
+pycurl
+ipython
+-r ./src/odoo/requirements.txt
+-e ./src/odoo

@@ -1,0 +1,9 @@
+{% set cfg = salt['mc_project.get_configuration'](project) %}
+# Sysadmin settings like hosts, credentials, paths, cache settings, and loglevels
+{% for section, data in cfg.data.config.items() %}
+[{{section}}]
+{% for k, value in data.items() -%}
+{{k}} = {{value}}
+{% endfor -%}
+{% endfor %}
+# vim:set ft=cfg:

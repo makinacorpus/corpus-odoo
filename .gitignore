@@ -1,0 +1,10 @@
+*pyc
+/cache
+/venv/
+/develop_eggs/
+/src/
+/bin/
+/eggs/
+/lib/
+/dist/
+!/.salt

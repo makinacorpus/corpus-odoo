@@ -1,0 +1,119 @@
+#
+# This file contains default values which are used
+# by the salt states deploying your project.
+# you may copy them to your relevant PILLAR file
+# before editing them.
+# If you need to add variables, this is where to begin.
+# Please keep defaults in there, but real passwords
+# must be putted inside pillar
+#
+# replace project_name in your pillar by
+# the current projectname
+# you can also merge parts of this file
+# with the relevant pillar
+makina-projects.projectname:
+  data:
+    app_root: "{project_root}"
+    odoo_data: "{data_root}/odoo"
+    htaccess: "/etc/{name}.webaccess"
+    odoo_url: "https://github.com/odoo/odoo.git"
+    domain: "{fqdn}"
+    odoo_rev: "8.0"
+    shell_env: {}
+    py: "{py_root}/bin/python"
+    py_root: "{project_root}/venv"
+    requirements: "{project_root}/requirements.txt"
+    server_aliases: []
+    nginx_upstreams: salt://makina-projects/{name}/files/nginx.upstreams.conf
+    nginx_vhost: salt://makina-projects/{name}/files/nginx.content.conf
+    adminmail: "root@{domain}"
+    timezone: 'Europe/Paris'
+    admin_mail: "{adminmail}"
+    admin_password: {{salt['mc_utils.generate_stored_password'](
+                           'corpus-django_web_admin')}}
+    db_user: '{name}'
+    db_port: '5432'
+    db_host: '127.0.0.1'
+    db_name: 'db'
+    db_password: '{name}secret'
+    debug: "False"
+    # if empty, will use selfgenerated from domain
+    ssl_cert_content: ""
+    ssl_key_content: ""
+    configs:
+      "{data_root}/odoo_wrapper.sh": {
+          mode: "0755",
+          template: "salt://makina-projects/{name}/files/odoo_wrapper.sh"} 
+      "{data_root}/openerp_rc": {
+          template: "salt://makina-projects/{name}/files/openerp_serverrc"}
+      "{data_root}/server.crt": {
+          template: "salt://makina-projects/{name}/files/server.crt"}
+      "{data_root}/server.key": {
+            template: "salt://makina-projects/{name}/files/server.key"}
+    config:
+      options:
+        addons_path: "{project_roo}/src/odoo/openerp/addons,{project_root}/src/odoo/addons"
+        admin_passwd: admin
+        auto_reload: "False"
+        csv_internal_sep: ","
+        data_dir: "{odoo_data}"
+        db_host: "{db_host}"
+        db_maxconn: 64
+        db_name: "{db_name}"
+        db_password: "{db_password}"
+        db_port: "{db_port}"
+        db_template: template1
+        db_user: "{db_user}"
+        dbfilter: ".*"
+        debug_mode: "{debug}"
+        demo: "{}"
+        email_from: "sysadmin@{fqdn}"
+        geoip_database: "/usr/share/GeoIP/GeoLiteCity.dat"
+        limit_memory_hard: 2684354560
+        limit_memory_soft: 2147483648
+        limit_request: 8192
+        limit_time_cpu: 60
+        limit_time_real: 120
+        list_db: "True"
+        log_db: "False"
+        log_handler: ":INFO"
+        log_level: "info"
+        logfile: "None"
+        logrotate: "False"
+        max_cron_threads: 2
+        osv_memory_age_limit: 1.0
+        osv_memory_count_limit: False
+        smtp_password: "False"
+        smtp_port: 25
+        smtp_server: localhost
+        smtp_ssl: "False"
+        smtp_user: "False"
+        syslog: "False"
+        test_commit: "False"
+        test_enable: "False"
+        test_file: "False"
+        test_report_directory: "False"
+        translate_modules: "['all']"
+        xmlrpc: "True"
+        xmlrpcs: "True"
+        xmlrpc_interface: ""
+        xmlrpcs_interface: ""
+        longpolling_port: 8072
+        xmlrpc_port: 8069
+        xmlrpcs_port: 8071
+        unaccent: "False"
+        pg_path: "None"
+        secure_cert_file: "{data_root}/server.cert"
+        secure_pkey_file: "{data_root}/server.key"
+        server_wide_modules: "None"
+        workers: 4
+        import_partial: ""
+        timezone: "Europe/Paris"
+        reportgz: "False"
+        pidfile: "None"
+        proxy_mode: "True"
+        without_demo: "False"
+  env_defaults:
+    dev:
+      debug: "True"
+# vim:set ft=yaml:
