@@ -40,6 +40,7 @@ makina-projects.projectname:
     # if empty, will use selfgenerated from domain
     ssl_cert_content: ""
     ssl_key_content: ""
+    www: "{data_root}/www"
     configs:
       "{data_root}/odoo_wrapper.sh": {
           mode: "0755",
@@ -50,10 +51,12 @@ makina-projects.projectname:
           template: "salt://makina-projects/{name}/files/server.crt"}
       "{data_root}/server.key": {
             template: "salt://makina-projects/{name}/files/server.key"}
+    #ldap_auth: "ldap://ldap.xxx.net/dc=company,dc=org?uid?sub?(objectClass=person)"
+    psql_url: "postgres://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
     config:
       options:
-        addons_path: "{project_roo}/src/odoo/openerp/addons,{project_root}/src/odoo/addons"
-        admin_passwd: admin
+        addons_path: "{project_root}/src/odoo/openerp/addons,{project_root}/src/odoo/addons"
+        admin_passwd: "{admin_password}"
         auto_reload: "False"
         csv_internal_sep: ","
         data_dir: "{odoo_data}"

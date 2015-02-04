@@ -116,6 +116,7 @@ prepreqs-{{cfg.name}}:
       - user: {{cfg.name}}-www-data
     - names:
       - {{cfg.data.odoo_data}}
+      - "{{data.www}}"
 
 {{cfg.name}}-npm:
   cmd.run:

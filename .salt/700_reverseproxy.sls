@@ -9,9 +9,10 @@ include:
 /bin/true:
   cmd.run:
     - watch_in:
-      - mc_proxy: circus-pre-conf
+      - mc_proxy: nginx-pre-restart-hook
 
-{{ nginx.virtualhost(domain=data.domain, doc_root=data.static,
+
+{{ nginx.virtualhost(domain=data.domain, doc_root=data.www,
                      server_aliases=data.server_aliases,
                      vhost_basename='corpus-'+cfg.name,
                      vh_top_source=data.nginx_upstreams,

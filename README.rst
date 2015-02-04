@@ -57,3 +57,12 @@ USE/Install With makina-states
     git fetch --all
     git push github master:prod
 
+
+Regular & non automated Postinstall steps
+------------------------------------------------
+* log as admin
+* install locale
+* change admin & user tz & locale
+* install ldap & employee app
+* on settings/company, configure ldap server & company details
+
