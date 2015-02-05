@@ -15,7 +15,7 @@ def local_snapshot(data_dir=None,
                    backup_dir=None,
                    url=None,
                    project='odoo',
-                   keep=20):
+                   keep=20, *a, **kw):
     """."""
     _s = __salt__
     try:
@@ -69,7 +69,7 @@ def ssh_snapshot(data_dir=None,
              backup_dir=None,
              url=None,
              project='odoo',
-             keep=20):
+             keep=20, *a, **kw):
     """."""
     _s = __salt__
     try:
