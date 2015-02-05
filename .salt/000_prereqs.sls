@@ -1,7 +1,9 @@
+{%- import "makina-states/services/db/postgresql/hooks.sls" as hooks with context %}
 {% set cfg = opts.ms_project %}
 {% set data = cfg.data %}
 include:
   - makina-states.localsettings.nodejs
+  - makina-states.services.db.postgresql.client
   - makina-states.localsettings.npm
  
 {{cfg.name}}-htaccess:
@@ -39,6 +41,7 @@ prepreqs-{{cfg.name}}:
   pkg.installed:
     - watch:
       - user: {{cfg.name}}-www-data
+      - mc_proxy: {{hooks.orchestrate['base']['postpkg']}}
     - pkgs:
       - sqlite3
       - liblcms2-2
@@ -96,7 +99,6 @@ prepreqs-{{cfg.name}}:
       - libgeos-dev
       - geoip-bin
       - libgeoip-dev
-      - postgresql-client
 
 {{cfg.name}}-dl-odoo:
   mc_git.latest:
