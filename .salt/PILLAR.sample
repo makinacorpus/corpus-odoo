@@ -115,7 +115,7 @@ makina-projects.projectname:
         reportgz: "False"
         pidfile: "None"
         proxy_mode: "True"
-        without_demo: "False"
+        without_demo: "all"
   env_defaults:
     dev:
       debug: "True"
