@@ -172,6 +172,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
                         try:
                             pid = partners_obj.search(
                                 [('email', 'ilike', m)])[0]
+                            break
                         except IndexError:
                             continue
                     if pid is None:
@@ -190,6 +191,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
                     for m in mails:
                         try:
                             uid = users_obj.search([('login', 'ilike', m)])[0]
+                            break
                         except IndexError:
                             # user does not exists, create it
                             continue
@@ -208,6 +210,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
                         try:
                             eid = employees_obj.search(
                                 [('work_email', 'ilike', m)])[0]
+                            break
                         except IndexError:
                             # user does not exists, create it
                             continue
