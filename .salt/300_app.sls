@@ -29,6 +29,7 @@ include:
     - watch_in:
       - mc_proxy: circus-pre-conf 
 
+
 {% set circus_data = {
   'cmd': '{0}/odoo_wrapper.sh'.format(cfg.data_root),
   'environment': cfg.data.shell_env,

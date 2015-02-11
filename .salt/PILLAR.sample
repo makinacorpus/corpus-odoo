@@ -44,14 +44,16 @@ makina-projects.projectname:
     configs:
       "{data_root}/odoo_wrapper.sh": {
           mode: "0755",
-          template: "salt://makina-projects/{name}/files/odoo_wrapper.sh"} 
+          template: "salt://makina-projects/{name}/files/odoo_wrapper.sh"}
       "{data_root}/openerp_rc": {
           template: "salt://makina-projects/{name}/files/openerp_serverrc"}
       "{data_root}/server.crt": {
           template: "salt://makina-projects/{name}/files/server.crt"}
       "{data_root}/server.key": {
             template: "salt://makina-projects/{name}/files/server.key"}
-    #ldap_auth: "ldap://ldap.xxx.net/dc=company,dc=org?uid?sub?(objectClass=person)"
+    #ldap_tls: "true"
+    #ldap_url: "ldap://ldap.xxx.net/dc=company,dc=org"
+    #ldap_auth: "{ldapurl}?uid?sub?(objectClass=person)"
     psql_url: "postgres://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
     config:
       options:

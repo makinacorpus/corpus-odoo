@@ -119,5 +119,4 @@ def ssh_snapshot(data_dir=None,
 
 def snapshot(*a, **kw):
     return local_snapshot(*a, **kw)
-
 # vim:set et sts=4 ts=4 tw=80:
