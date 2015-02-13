@@ -162,9 +162,25 @@ def local_restore(bid,
         'rsync -azv --delete ./ {0}/'.format(cfg['data']['odoo_data']),
         cwd=tmpdir,
         user=user)
-    pgcmd = ('echo "drop schema public cascade;'
-             'drop schema tiger cascade;'
-             'drop schema topology cascade;"|psql -v ON_ERROR_STOP=1'
+    for pgcmdin in [
+        'echo "drop schema public cascade;"',
+        'drop "schema tiger cascade;"',
+        'drop "schema topology cascade;"',
+    ]:
+        pgcmd = ('{2}|psql'
+                 ' -d {0[db_name]}'
+                 ' -h {0[db_host]}'
+                 ' -p {0[db_port]}'
+                 ' -U {0[db_user]}'
+                 '').format(cfg['data'], sql, pgcmdin)
+        ret = _s['cmd.run_all'](pgcmd,
+                                env={"PGPASSWORD": cfg['data']['db_password']},
+                                cwd=bdir)
+    pgcmd = ('echo "create schema public;'
+             'create extension postgis;'
+             'create extension fuzzystrmatch;'
+             'create extension postgis_tiger_geocoder;'
+             '"|psql -v ON_ERROR_STOP=1'
              ' -d {0[db_name]}'
              ' -h {0[db_host]}'
              ' -p {0[db_port]}'
@@ -173,16 +189,7 @@ def local_restore(bid,
     ret = assert_cmd(pgcmd,
                      env={"PGPASSWORD": cfg['data']['db_password']},
                      cwd=bdir)
-    pgcmd = ('echo "create schema public;"|psql -v ON_ERROR_STOP=1'
-             ' -d {0[db_name]}'
-             ' -h {0[db_host]}'
-             ' -p {0[db_port]}'
-             ' -U {0[db_user]}'
-             ''.format(cfg['data'], sql))
-    ret = assert_cmd(pgcmd,
-                     env={"PGPASSWORD": cfg['data']['db_password']},
-                     cwd=bdir)
-    pgcmd = ('pg_restore {1}|psql -v ON_ERROR_STOP=1'
+    pgcmd = ('pg_restore {1}|psql'
              ' -d {0[db_name]}'
              ' -h {0[db_host]}'
              ' -p {0[db_port]}'
