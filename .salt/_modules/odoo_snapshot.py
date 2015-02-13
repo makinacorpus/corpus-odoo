@@ -5,6 +5,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 __docformat__ = 'restructuredtext en'
+import tempfile
 
 import os
 
@@ -115,6 +116,89 @@ def ssh_snapshot(data_dir=None,
         print(_s['mc_utils.output'](ret, outputter='nested'))
         raise ValueError('backup failed dump')
     return True
+
+
+def assert_cmd(*a, **kw):
+    _s = __salt__
+    ret = _s['cmd.run_all'](*a, **kw)
+    if ret['retcode']:
+        pprint(ret)
+        raise AssertionError('{0} failed'.format(a[0]))
+    return ret
+
+
+def local_restore(bid,
+                  data_dir=None,
+                  backup_dir=None,
+                  url=None,
+                  project='odoo',
+                  keep=20, *a, **kw):
+    """."""
+    _s = __salt__
+    user = 'root'
+    try:
+        cfg = _s['mc_project.get_configuration'](project)
+        user = cfg['user']
+    except Exception:
+        cfg = {}
+    if not data_dir:
+        data_dir = cfg['data_root']
+    if not backup_dir:
+        backup_dir = os.path.join(data_dir, 'snapshots')
+    if not url:
+        url = ('postgresql://{0[db_user]}:{0[db_password]}'
+               '@{0[db_host]}:{0[db_port]}/'
+               '{0[db_name]}').format(cfg['data'])
+    bdir = os.path.join(backup_dir, "{0}".format(bid))
+    tarb = '{0}/data.tbz2'.format(bdir)
+    sql = '{0}/dump.sql'.format(bdir)
+    for i in [tarb, sql]:
+        if not os.path.exists(i):
+            raise IOError('{0} does not exists'.foramt(i))
+    tmpdir = tempfile.mkdtemp()
+    ret = assert_cmd('circusctl stop')
+    ret = assert_cmd('tar xjvf {0}'.format(tarb), cwd=tmpdir, user=user)
+    ret = assert_cmd(
+        'rsync -azv --delete ./ {0}/'.format(cfg['data']['odoo_data']),
+        cwd=tmpdir,
+        user=user)
+    pgcmd = ('echo "drop schema public;"|psql'
+             ' -d {0[db_name]}'
+             ' -h {0[db_host]}'
+             ' -p {0[db_port]}'
+             ' -U {0[db_user]}'
+             ''.format(cfg['data'], sql))
+    ret = assert_cmd(pgcmd,
+                     env={"PGPASSWORD": cfg['data']['db_password']},
+                     cwd=bdir)
+    pgcmd = ('echo "create schema public;"|psql'
+             ' -d {0[db_name]}'
+             ' -h {0[db_host]}'
+             ' -p {0[db_port]}'
+             ' -U {0[db_user]}'
+             ''.format(cfg['data'], sql))
+    ret = assert_cmd(pgcmd,
+                     env={"PGPASSWORD": cfg['data']['db_password']},
+                     cwd=bdir)
+    pgcmd = ('pg_restore {1}|psql'
+             ' -d {0[db_name]}'
+             ' -h {0[db_host]}'
+             ' -p {0[db_port]}'
+             ' -U {0[db_user]}'
+             ''.format(cfg['data'], sql))
+    ret = assert_cmd(pgcmd,
+                     env={"PGPASSWORD": cfg['data']['db_password']},
+                     cwd=bdir,
+                     use_vt=True)
+    rp = '/srv/projects/odoo/global-reset-perms.sh'
+    if os.path.exists(rp):
+        ret = _s['cmd.run_all'](rp)
+    ret = assert_cmd('circusctl start')
+    return ret
+
+
+def restore(*a, **kw):
+    return local_restore(*a, **kw)
 
 
 def snapshot(*a, **kw):
