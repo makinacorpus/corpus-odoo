@@ -162,7 +162,9 @@ def local_restore(bid,
         'rsync -azv --delete ./ {0}/'.format(cfg['data']['odoo_data']),
         cwd=tmpdir,
         user=user)
-    pgcmd = ('echo "drop schema public;"|psql'
+    pgcmd = ('echo "drop schema public cascade;'
+             'drop schema tiger cascade;'
+             'drop schema topology cascade;"|psql -v ON_ERROR_STOP=1'
              ' -d {0[db_name]}'
              ' -h {0[db_host]}'
              ' -p {0[db_port]}'
@@ -171,7 +173,7 @@ def local_restore(bid,
     ret = assert_cmd(pgcmd,
                      env={"PGPASSWORD": cfg['data']['db_password']},
                      cwd=bdir)
-    pgcmd = ('echo "create schema public;"|psql'
+    pgcmd = ('echo "create schema public;"|psql -v ON_ERROR_STOP=1'
              ' -d {0[db_name]}'
              ' -h {0[db_host]}'
              ' -p {0[db_port]}'
@@ -180,7 +182,7 @@ def local_restore(bid,
     ret = assert_cmd(pgcmd,
                      env={"PGPASSWORD": cfg['data']['db_password']},
                      cwd=bdir)
-    pgcmd = ('pg_restore {1}|psql'
+    pgcmd = ('pg_restore {1}|psql -v ON_ERROR_STOP=1'
              ' -d {0[db_name]}'
              ' -h {0[db_host]}'
              ' -p {0[db_port]}'
