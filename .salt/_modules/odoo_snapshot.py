@@ -48,6 +48,7 @@ def local_snapshot(data_dir=None,
         raise ValueError('Already existing backup {0}'.format(fcurb))
     ret = _s['cmd.run_all'](
         'tar cjf {0}/data.tbz2 .'.format(fcurb),
+        python_shell=True,
         cwd=cfg['data']['odoo_data'])
     if ret['retcode']:
         pprint(ret)
@@ -59,6 +60,7 @@ def local_snapshot(data_dir=None,
                             ' -U {0[db_user]}'
                             ' > dump.sql'.format(cfg['data']),
                             env={"PGPASSWORD": cfg['data']['db_password']},
+                            python_shell=True,
                             cwd=fcurb)
     if ret['retcode']:
         print(_s['mc_utils.output'](ret, outputter='nested'))
@@ -102,6 +104,7 @@ def ssh_snapshot(data_dir=None,
         raise ValueError('Already existing backup {0}'.format(fcurb))
     ret = _s['cmd.run_all'](
         'tar cjf {0}/data.tbz2 .'.format(fcurb),
+        python_shell=True,
         cwd=cfg['data']['odoo_data'])
     if ret['retcode']:
         pprint(ret)
@@ -111,6 +114,7 @@ def ssh_snapshot(data_dir=None,
     ret = _s['cmd.run_all']('ssh -i ../../key {0[db_host]}'
                             ' "pg_dump"> dump.sql'.format(cfg['data']),
                             env={"PGPASSWORD": cfg['data']['db_password']},
+                            python_shell=True,
                             cwd=fcurb)
     if ret['retcode']:
         print(_s['mc_utils.output'](ret, outputter='nested'))
@@ -120,6 +124,7 @@ def ssh_snapshot(data_dir=None,
 
 def assert_cmd(*a, **kw):
     _s = __salt__
+    kw.setdedefault('python_shell', True)
     ret = _s['cmd.run_all'](*a, **kw)
     if ret['retcode']:
         pprint(ret)
@@ -174,6 +179,7 @@ def local_restore(bid,
                  ' -U {0[db_user]}'
                  '').format(cfg['data'], sql, pgcmdin)
         ret = _s['cmd.run_all'](pgcmd,
+                                python_shell=True,
                                 env={"PGPASSWORD": cfg['data']['db_password']},
                                 cwd=bdir)
     pgcmd = ('echo "create schema public;'
@@ -201,7 +207,7 @@ def local_restore(bid,
                      use_vt=True)
     rp = '/srv/projects/odoo/global-reset-perms.sh'
     if os.path.exists(rp):
-        ret = _s['cmd.run_all'](rp)
+        ret = _s['cmd.run_all'](rp, python_shell=True)
     ret = assert_cmd('circusctl start')
     return ret
 
