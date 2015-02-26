@@ -5,7 +5,7 @@ include:
   - makina-states.localsettings.nodejs
   - makina-states.services.db.postgresql.client
   - makina-states.localsettings.npm
- 
+
 {{cfg.name}}-htaccess:
   file.managed:
     - name: {{data.htaccess}}
@@ -129,3 +129,24 @@ prepreqs-{{cfg.name}}:
               test -e /usr/lib/node_modules/less-plugin-clean-css
               test -e /usr/lib/node_modules/less
     - name: npm install -g less less-plugin-clean-css
+
+
+{% set w_ver = '0.12.2.1' %}
+{% set suf = '_linux-trusty-amd64' %}
+{% set deb = "wkhtmltox-{w_ver}{suf}.deb".format(suf=suf, w_ver=w_ver) %}
+
+{{cfg.name}}-html:
+  cmd.run:
+    - unless: test "x$(dpkg -l|grep wkhtmltox|awk '{print $3}')" = "x{{w_ver}}"
+    - name: |
+            set -e
+            set -x
+            apt-get install -y --force-yes wkhtmltopdf
+            apt-get remove wkhtmltopdf
+            cd /tmp
+            if [ -e "{{deb}}"];then rm -f "{{deb}}";fi
+            wget -c "http://downloads.sourceforge.net/project/wkhtmltopdf/{{w_ver}}/{{deb}}"
+            apt-get install xfonts-75dpi
+            dpkg -i "{{deb}}"
+            apt-get -f install
+    - use_vt: true
