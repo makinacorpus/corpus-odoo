@@ -6,5 +6,7 @@
 --allow-unverified mongodb
 pycurl
 ipython
+unidecode
+ofxparse
 -r ./src/odoo/requirements.txt
 -e ./src/odoo

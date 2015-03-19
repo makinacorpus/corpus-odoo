@@ -118,6 +118,8 @@ prepreqs-{{cfg.name}}:
       - user: {{cfg.name}}-www-data
     - names:
       - {{cfg.data.odoo_data}}
+      - {{cfg.data_root}}/addons
+      - {{cfg.data_root}}/addons_repos
       - "{{data.www}}"
 
 {{cfg.name}}-npm:
@@ -129,6 +131,21 @@ prepreqs-{{cfg.name}}:
               test -e /usr/lib/node_modules/less-plugin-clean-css
               test -e /usr/lib/node_modules/less
     - name: npm install -g less less-plugin-clean-css
+
+{% if data.get('addons_repos', []) %}
+{% for i, cdata in salt['mc_utils.json_load'](data.addons_repos).items() %}
+{{cfg.name}}-addons-repos-{{i}}:
+  mc_git.latest:
+    - name: "{{cdata.url}}"
+    - user: "{{cfg.user}}"
+    {% if cdata.get('rev') %}
+    - rev: "{{cdata.get('rev')}}"
+    {%endif %}
+    - target: "{{cfg.data_root}}/addons_repos/{{i}}"
+    - require:
+      - file: {{cfg.name}}-dirs
+{% endfor %}
+{% endif %}
 
 
 {% set w_ver = '0.12.2.1' %}

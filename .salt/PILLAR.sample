@@ -55,9 +55,17 @@ makina-projects.projectname:
     #ldap_url: "ldap://ldap.xxx.net/dc=company,dc=org"
     #ldap_auth: "{ldapurl}?uid?sub?(objectClass=person)"
     psql_url: "postgres://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+            {# "account-payment": {"url": "https://github.com/OCA/account-payment.git", "rev": "8.0"}, #}
+    {% set addons_repos = {
+            "bank-payment": {"url": "https://github.com/OCA/bank-payment.git", "rev": "8.0"},
+            "bank-statement-import": {"url": "https://github.com/OCA/bank-statement-import.git", "rev": "8.0"},
+            "bank-statement-reconcile": {"url": "https://github.com/OCA/bank-statement-reconcile.git", "rev": "8.0"},
+    } %}
+    addons_repos: |
+                  {{salt['mc_utils.json_dump'](addons_repos)}}
     config:
       options:
-        addons_path: "{project_root}/src/odoo/openerp/addons,{project_root}/src/odoo/addons"
+        addons_path: "{% for i in addons_repos%}{data_root}/addons_repos/{{i}},{%endfor%}{data_root}/addons,{project_root}/src/odoo/openerp/addons,{project_root}/src/odoo/addons"
         admin_passwd: "{admin_password}"
         auto_reload: "False"
         csv_internal_sep: ","
@@ -121,4 +129,4 @@ makina-projects.projectname:
   env_defaults:
     dev:
       debug: "True"
-# vim:set ft=yaml:
+# vim:set ft=sls:
