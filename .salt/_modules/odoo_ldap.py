@@ -87,7 +87,11 @@ def ldap_sync(project='odoo', *p_a, **kw):
         conn_kw[i] = v
 
     _ms = __salt__['mc_utils.magicstring']
-    users = query(conn_kw.pop('uri'), data['ldap_users_filter'], **conn_kw)
+    ldap_uri = conn_kw.pop('uri')
+    users = query(ldap_uri,
+                  data['ldap_users_filter'], **conn_kw)
+    ex_users = query(ldap_uri,
+                     data['ldap_ex_users_filter'], **conn_kw)
     oerp = oerplib.OERP(data['odoo_api'],
                         data['odoo_port'],
                         data['odoo_proto'])
@@ -102,6 +106,8 @@ def ldap_sync(project='odoo', *p_a, **kw):
     company_id = data['odoo_company_id']
     snow = datetime.datetime.now()
     snow = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()))
+    ex_uids = []
+    [ex_uids.extend(a[1]['uid']) for a in ex_users]
     tz = 'Europe/Paris'
     lang = 'fr_FR'
     for user in users:
@@ -131,10 +137,13 @@ def ldap_sync(project='odoo', *p_a, **kw):
                 mails.append(m)
             mails = __salt__['mc_utils.uniquify'](mails)
             name = '{0} {1}'.format(_ms(firstname), _ms(lastname))
+            active = True
+            if tri in ex_uids:
+                active = False
             pdata = {'name': name,
                      'display_name': name,
                      'tz': tz,
-                     'city': city,
+                     'ci:vty': city,
                      'company_id': company_id,
                      'create_uid': 1,
                      'lang': lang,
@@ -148,7 +157,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
                      'function': employeeType,
                      'create_date': snow,
                      'color': 0}
-            odata = {'active': True,
+            odata = {'active': active,
                      'login': tri,
                      'password': None,
                      'password_crypt': None,
@@ -164,7 +173,8 @@ def ldap_sync(project='odoo', *p_a, **kw):
                      'work_email': mails[0]}
             lname = name.lower()
             try:
-                pid = partners_obj.search([('name', 'ilike', name)])[0]
+                pid = partners_obj.search([
+                    ('name', 'ilike', name)])[0]
             except IndexError:
                 pid = None
                 try:
@@ -184,13 +194,16 @@ def ldap_sync(project='odoo', *p_a, **kw):
             odata['partner_id'] = pid
             try:
                 uid = users_obj.search(
-                    [('login', 'ilike', udata['uid'][0])])[0]
+                    [('login', 'ilike', udata['uid'][0]),
+                     ('active', 'in', [True, None, False])])[0]
             except IndexError:
                 uid = None
                 try:
                     for m in mails:
                         try:
-                            uid = users_obj.search([('login', 'ilike', m)])[0]
+                            uid = users_obj.search([
+                                ('login', 'ilike', m),
+                                ('active', 'in', [True, None, False])])[0]
                             break
                         except IndexError:
                             # user does not exists, create it
