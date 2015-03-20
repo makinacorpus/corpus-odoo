@@ -16,7 +16,8 @@ makina-projects.projectname:
     app_root: "{project_root}"
     odoo_data: "{data_root}/odoo"
     htaccess: "/etc/{name}.webaccess"
-    odoo_url: "https://github.com/odoo/odoo.git"
+    #odoo_url: "https://github.com/odoo/odoo.git"
+    odoo_url: "https://github.com/makina-corpus/odoo.git"
     domain: "{fqdn}"
     odoo_rev: "8.0"
     shell_env: {}
