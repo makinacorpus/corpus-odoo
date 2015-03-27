@@ -13,11 +13,22 @@
 # with the relevant pillar
 makina-projects.projectname:
   data:
+    odoo_port: 8069
+    {# new deb version is not working ! #}
+    #wkhtml_ver: "0.12.2.1"
+    #wkhtml_suf: "_linux-trusty-amd64"
+    #wkhtml_arc: "wkhtmltox-{wkhtml_ver}{wkhtml_suf}.deb"
+    #wkhtml_url: "http://downloads.sourceforge.net/project/wkhtmltopdf/{wkhtml_ver}/{wkhtml_deb}"
+    wkhtml_ver: "0.12.0"
+    wkhtml_arc: "wkhtmltox-linux-amd64_0.12.0-03c001d.tar.xz"
+    wkhtml_url: "http://sourceforge.net/projects/wkhtmltopdf/files/archive/0.12.0/{wkhtml_arc}"
+    odoo_sport: 8071
+    odoo_lpport: 8072
     app_root: "{project_root}"
     odoo_data: "{data_root}/odoo"
     htaccess: "/etc/{name}.webaccess"
     #odoo_url: "https://github.com/odoo/odoo.git"
-    odoo_url: "https://github.com/makina-corpus/odoo.git"
+    odoo_url: "https://github.com/makinacorpus/odoo.git"
     domain: "{fqdn}"
     odoo_rev: "8.0"
     shell_env: {}
@@ -112,9 +123,9 @@ makina-projects.projectname:
         xmlrpcs: "True"
         xmlrpc_interface: ""
         xmlrpcs_interface: ""
-        longpolling_port: 8072
-        xmlrpc_port: 8069
-        xmlrpcs_port: 8071
+        xmlrpc_port: "{odoo_port}"
+        xmlrpcs_port: "{odoo_sport}"
+        longpolling_port: "{odoo_lpport}"
         unaccent: "False"
         pg_path: "None"
         secure_cert_file: "{data_root}/server.cert"

@@ -148,22 +148,30 @@ prepreqs-{{cfg.name}}:
 {% endif %}
 
 
-{% set w_ver = '0.12.2.1' %}
-{% set suf = '_linux-trusty-amd64' %}
-{% set deb = "wkhtmltox-{w_ver}{suf}.deb".format(suf=suf, w_ver=w_ver) %}
-
+{# NEW VERSION IS NOT WORKING YET #}
 {{cfg.name}}-html:
   cmd.run:
-    - unless: test "x$(dpkg -l|grep wkhtmltox|awk '{print $3}')" = "x{{w_ver}}"
+    - unless: set -x;which wkhtmltopdf && test "x$(wkhtmltopdf --version|head -n 3|grep wkhtml|awk '{print $2}')" = "x{{data.wkhtml_ver}}"
     - name: |
             set -e
             set -x
+            export DPKG_FRONTEND="non-interactive"
+            apt-get install -y --force-yes xfonts-75dpi
+            # install deps
             apt-get install -y --force-yes wkhtmltopdf
-            apt-get remove wkhtmltopdf
+            apt-get remove -y --force-yes  wkhtmltopdf
             cd /tmp
-            if [ -e "{{deb}}"];then rm -f "{{deb}}";fi
-            wget -c "http://downloads.sourceforge.net/project/wkhtmltopdf/{{w_ver}}/{{deb}}"
-            apt-get install xfonts-75dpi
+            if [ -e "{{data.wkhtml_arc}}" ];then rm -f "{{data.wkhtml_arc}}";fi
+            wget -c "{{data.wkhtml_url}}"
+            {% if data.wkhtml_url.endswith('deb') %}
             dpkg -i "{{deb}}"
             apt-get -f install
+            {% else %}
+            tar xvf "{{data.wkhtml_arc}}"
+            cd /tmp/wkhtmltox
+            rm -f wkhtmltox*deb
+            tar czvf ../wkhtmltox.tar.gz .
+            alien --to-deb ../wkhtmltox.tar.gz
+            dpkg -i wkhtmltox*deb
+            {% endif%}
     - use_vt: true
