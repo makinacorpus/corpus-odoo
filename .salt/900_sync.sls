@@ -7,3 +7,13 @@
   cmd.run:
     - name: /salt-venv/salt/bin/pip install "OERPLib==0.8.4"
     - unless: test -e /salt-venv/salt/lib/python2.7/site-packages/OERPLib-0.8.4-py2.7.egg-info
+
+{{cfg.name}}-cron:
+  file.managed:
+    - name: "/etc/cron.d/{{cfg.name}}ldap_cron"
+    - contents: |
+                0 */1 * * * root su -c ". /etc/profile;salt-call -lquiet  --local odoo_ldap.ldap_sync >/dev/null 2>&1"
+    - user: root
+    - group: root
+    - mode: 050
+ 
