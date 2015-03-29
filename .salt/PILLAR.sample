@@ -13,7 +13,6 @@
 # with the relevant pillar
 makina-projects.projectname:
   data:
-    odoo_port: 8069
     {# new deb version is not working ! #}
     #wkhtml_ver: "0.12.2.1"
     #wkhtml_suf: "_linux-trusty-amd64"
@@ -22,6 +21,7 @@ makina-projects.projectname:
     wkhtml_ver: "0.12.0"
     wkhtml_arc: "wkhtmltox-linux-amd64_0.12.0-03c001d.tar.xz"
     wkhtml_url: "http://sourceforge.net/projects/wkhtmltopdf/files/archive/0.12.0/{wkhtml_arc}"
+    odoo_port: 8069
     odoo_sport: 8071
     odoo_lpport: 8072
     app_root: "{project_root}"
