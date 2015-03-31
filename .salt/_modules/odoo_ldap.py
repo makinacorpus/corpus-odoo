@@ -170,6 +170,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
                      'write_date': snow,
                      'display_groups_suggestions': True}
             edata = {'name': name,
+                     'active': active,
                      'work_email': mails[0]}
             lname = name.lower()
             try:
@@ -213,34 +214,42 @@ def ldap_sync(project='odoo', *p_a, **kw):
                 except IndexError:
                     uid = users_obj.create(odata)
                     log.info('Creating user for {0}'.format(name))
+            employees = []
+            try:
+                employees_obj.search(
+                    [('login', 'ilike', udata['uid'][0]),
+                     ('active', 'in', [True, None, False])])[0]
+            except IndexError:
+                pass
             try:
                 eid = employees_obj.search(
-                    [('login', 'ilike', udata['uid'][0])])[0]
+                    [('name', 'ilike', name),
+                     ('active', 'in', [True, None, False])])[0]
             except IndexError:
-                eid = None
+                pass
+            for m in mails:
                 try:
-                    for m in mails:
-                        try:
-                            eid = employees_obj.search(
-                                [('work_email', 'ilike', m)])[0]
-                            break
-                        except IndexError:
-                            # user does not exists, create it
-                            continue
-                    if eid is None:
-                        eid = employees_obj.search(
-                            [('name', 'ilike', name)])[0]
+                    employees.extend(employees_obj.search([
+                        ('active', 'in', [True, None, False]),
+                        ('work_email', 'ilike', m)]))
+                    break
                 except IndexError:
+                    # user does not exists, create it
+                    continue
+            if not employees:
                     eid = employees_obj.create(edata)
                     log.info('Creating employee for {0}'.format(name))
-            eobj = [a for a in employees_obj.browse([eid])][0]
             uobj = [a for a in users_obj.browse([uid])][0]
             pdata['user_id'] = uid
             odata['partner_id'] = pid
             log.info('Updating partner: {1}/{0}'.format(pobj.id, name))
             oerp.write('res.partner', [pobj.id], pdata)
             log.info('Updating employee: {0}'.format(uobj.id))
-            oerp.write('hr.employee', [eobj.id], edata)
+            employees = __salt__['mc_utils.uniquify'](employees)
+            for eid in employees:
+                eobj = [a for a in employees_obj.browse([eid])][0]
+                log.info('Updating employee: {0}'.format(eobj.id))
+                oerp.write('hr.employee', [eobj.id], edata)
             log.info('Updating user: {0}'.format(uobj.id))
             oerp.write('res.users', [uobj.id], odata)
 # vim:set et sts=4 ts=4 tw=80:
