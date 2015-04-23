@@ -9,8 +9,10 @@
             set -e
             . "{{data.py_root}}/bin/activate"
             pw=$(python -c "
-            import sys;sys.path.append('addons')
-            from auth_crypt.auth_crypt import default_crypt_context
+            import sys;
+            import openerp.addons.base;
+            sys.path.append('addons');
+            from auth_crypt.auth_crypt import default_crypt_context;
             print(default_crypt_context.encrypt('{{data.admin_password}}'))
             ")
             echo "UPDATE res_users SET password=null, password_crypt='${pw}' WHERE login in ('demo', 'admin');" \
