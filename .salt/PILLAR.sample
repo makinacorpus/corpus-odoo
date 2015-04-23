@@ -24,6 +24,7 @@ makina-projects.projectname:
     odoo_port: 8069
     odoo_sport: 8071
     odoo_lpport: 8072
+    odoo_proto: "xmlrpc"
     app_root: "{project_root}"
     odoo_data: "{data_root}/odoo"
     htaccess: "/etc/{name}.webaccess"
