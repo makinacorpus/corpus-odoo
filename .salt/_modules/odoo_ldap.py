@@ -3,8 +3,9 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-__docformat__ = 'restructuredtext en'
 
+import copy
+import time
 import os
 import datetime
 
@@ -13,6 +14,8 @@ import salt.utils.odict
 import logging
 import oerplib
 
+
+from mc_states.api import six
 
 log = logging.getLogger(__name__)
 _marker = object()
@@ -69,6 +72,33 @@ def get_or_create_user(self, cr, uid, conf, login, ldap_entry,
                 user_id = user_obj.create(cr, SUPERUSER_ID, values)
         return user_id
 
+
+def sanitized_data(data):
+    data = copy.deepcopy(data)
+    for i in [a for a in data]:
+        val = data[i]
+        if (
+            isinstance(val, list) and
+            len(val) == 2 and
+            isinstance(val[0], int) and
+            isinstance(val[1], six.string_types)
+        ):
+            data[i] = val[0]
+    return data
+
+
+def update_obj(oerp, obj, data):
+    try:
+        for i, val in six.iteritems(sanitized_data(data)):
+            if i in ['id']:
+                continue
+            setattr(obj, i, val)
+        return oerp.write_record(obj)
+    except:
+        import pdb;pdb.set_trace()  ## Breakpoint ##
+        raise
+
+
 def ldap_sync(project='odoo', *p_a, **kw):
     """."""
     _s = __salt__
@@ -99,7 +129,6 @@ def ldap_sync(project='odoo', *p_a, **kw):
     #stz = oerp.common.timezone_get('admin',
     #                               data['admin_password'],
     #                               data['odoo_base'])
-    import time
     users_obj = oerp.get('res.users')
     employees_obj = oerp.get('hr.employee')
     partners_obj = oerp.get('res.partner')
@@ -138,6 +167,10 @@ def ldap_sync(project='odoo', *p_a, **kw):
             mails = __salt__['mc_utils.uniquify'](mails)
             name = '{0} {1}'.format(_ms(firstname), _ms(lastname))
             active = True
+            log.info(
+                '- On {0} {1}'.format(
+                    __salt__['mc_utils.magicstring'](firstname),
+                    __salt__['mc_utils.magicstring'](lastname)))
             if tri in ex_uids:
                 active = False
             pdata = {'name': name,
@@ -172,27 +205,17 @@ def ldap_sync(project='odoo', *p_a, **kw):
             edata = {'name': name,
                      'active': active,
                      'work_email': mails[0]}
-            lname = name.lower()
-            try:
-                pid = partners_obj.search([
-                    ('name', 'ilike', name)])[0]
-            except IndexError:
-                pid = None
-                try:
-                    for m in mails:
-                        try:
-                            pid = partners_obj.search(
-                                [('email', 'ilike', m)])[0]
-                            break
-                        except IndexError:
-                            continue
-                    if pid is None:
-                        raise IndexError('')
-                except IndexError:
-                    pid = partners_obj.create(pdata)
-                    log.info('Creating parter for {0}'.format(name))
-            pobj = [a for a in partners_obj.browse([pid])][0]
-            odata['partner_id'] = pid
+            synced_pdata = {'name': name,
+                            'display_name': name,
+                            'active': True,
+                            'email': udata['mail'][0]}
+            synced_odata = {'active': active,
+                            'login': tri}
+            synced_edata = {'name': name,
+                            'active': active,
+                            'work_email': mails[0]}
+            # create user
+            sodata, uobj, uid = None, None, None
             try:
                 uid = users_obj.search(
                     [('login', 'ilike', udata['uid'][0]),
@@ -214,42 +237,118 @@ def ldap_sync(project='odoo', *p_a, **kw):
                 except IndexError:
                     uid = users_obj.create(odata)
                     log.info('Creating user for {0}'.format(name))
-            employees = []
+            uobj = [a for a in users_obj.browse([uid])][0]
+            sodata = [a for a in users_obj.read([uid])][0]
+            # search employee
+            sedata, eobj, eid = None, None, None
+            employees = {}
             try:
-                employees_obj.search(
+                for e in employees_obj.search(
                     [('login', 'ilike', udata['uid'][0]),
-                     ('active', 'in', [True, None, False])])[0]
+                     ('active', 'in', [True, None, False])]
+                ):
+                    employees[e] = None
             except IndexError:
-                pass
-            try:
-                eid = employees_obj.search(
-                    [('name', 'ilike', name),
-                     ('active', 'in', [True, None, False])])[0]
-            except IndexError:
-                pass
+                try:
+                    for e in employees_obj.search(
+                        [('name', 'ilike', name),
+                         ('active', 'in', [True, None, False])]):
+                        employees[e] = None
+                except IndexError:
+                    pass
             for m in mails:
                 try:
-                    employees.extend(employees_obj.search([
+                    for e in employees_obj.search([
                         ('active', 'in', [True, None, False]),
-                        ('work_email', 'ilike', m)]))
-                    break
+                        ('work_email', 'ilike', m)
+                    ]):
+                        employees[e] = None
                 except IndexError:
-                    # user does not exists, create it
                     continue
-            if not employees:
-                    eid = employees_obj.create(edata)
-                    log.info('Creating employee for {0}'.format(name))
-            uobj = [a for a in users_obj.browse([uid])][0]
-            pdata['user_id'] = uid
-            odata['partner_id'] = pid
-            log.info('Updating partner: {1}/{0}'.format(pobj.id, name))
-            oerp.write('res.partner', [pobj.id], pdata)
-            log.info('Updating employee: {0}'.format(uobj.id))
-            employees = __salt__['mc_utils.uniquify'](employees)
-            for eid in employees:
-                eobj = [a for a in employees_obj.browse([eid])][0]
+            for eeid in [a for a in employees]:
+                employee = employees[eeid]
+                if employee:
+                    continue
+                employees[eeid] = [a for a in employees_obj.read([eeid])][0]
+            for eeid, employee in six.iteritems(employees):
+                # search employee linked to user
+                try:
+                    if (
+                        uid and
+                        employee.get('user_id')[0] == uid and
+                        employee.get('active')
+                    ):
+                        eid = eeid
+                        break
+                except (ValueError, TypeError, IndexError, AttributeError):
+                    continue
+            # create employee if not existing
+            if not eid:
+                log.info('Creating employee for {0}'.format(name))
+                eid = employees_obj.create(edata)
+            if not eid:
+                raise ValueError('no employee for {0}'.format(udata['name']))
+            eobj = [a for a in employees_obj.browse([eid])][0]
+            sedata = [a for a in employees_obj.read([eid])][0]
+            # search partner
+            spdata, pobj, pid = None, None, None
+            if sodata.get('partner_id'):
+                try:
+                    pobj = [a for a in partners_obj.browse(
+                        [sodata['partner_id'][0]])][0]
+                    spdata = [a for a in partners_obj.read(
+                        [sodata['partner_id'][0]])][0]
+                    pid = sodata['partner_id'][0]
+                except IndexError:
+                    continue
+            if not pid:
+                try:
+                    pid = partners_obj.search([('name', 'ilike', name)])[0]
+                except IndexError:
+                    pid = None
+                    try:
+                        for m in mails:
+                            try:
+                                pid = partners_obj.search(
+                                    [('email', 'ilike', m)])[0]
+                                break
+                            except IndexError:
+                                continue
+                        if pid is None:
+                            raise IndexError('')
+                    except IndexError:
+                        pass
+            if not pid:
+                log.info('Creating parter for {0}'.format(name))
+                pid = partners_obj.create(pdata)
+            if not pid:
+                raise ValueError('no partner for {0}'.format(udata['name']))
+            pobj = [a for a in partners_obj.browse([pid])][0]
+            spdata = [a for a in partners_obj.read([pid])][0]
+            # search delta
+            for idata, real_data, synced_data in (
+                (pdata, spdata, synced_pdata),
+                (odata, sodata, synced_odata),
+                (edata, sedata, synced_edata),
+            ):
+                for i in [a for a in synced_data]:
+                    if synced_data[i] != real_data[i]:
+                        real_data[i] = synced_data[i]
+                    else:
+                        synced_data.pop(i, None)
+            if spdata['user_id'][0] != uid:
+                synced_data['user_id'] = spdata['user_id'] = uid
+            if sodata['partner_id'][0] != pid:
+                synced_data['partner_id'] = sodata['partner_id'] = pid
+            if (not sedata['user_id']) or (sedata['user_id'][0] != uid):
+                synced_edata['user_id'] = sedata['user_id'] = uid
+            if synced_pdata:
+                log.info('Updating partner: {0}'.format(pobj.id))
+                update_obj(oerp, pobj, spdata)
+            if synced_edata:
                 log.info('Updating employee: {0}'.format(eobj.id))
-                oerp.write('hr.employee', [eobj.id], edata)
-            log.info('Updating user: {0}'.format(uobj.id))
-            oerp.write('res.users', [uobj.id], odata)
+                update_obj(oerp, eobj, sedata)
+            if synced_odata:
+                log.info('Updating user: {0}'.format(uobj.id))
+                update_obj(oerp, uobj, sodata)
 # vim:set et sts=4 ts=4 tw=80:
