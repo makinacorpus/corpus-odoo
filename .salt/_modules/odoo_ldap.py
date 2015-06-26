@@ -8,6 +8,7 @@ import copy
 import time
 import os
 import datetime
+import traceback
 
 from pprint import pprint
 import salt.utils.odict
@@ -94,8 +95,9 @@ def update_obj(oerp, obj, data):
                 continue
             setattr(obj, i, val)
         return oerp.write_record(obj)
-    except:
-        import pdb;pdb.set_trace()  ## Breakpoint ##
+    except Exception, ex:
+        trace = traceback.format_exc()
+        print(trace)
         raise
 
 
@@ -139,6 +141,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
     [ex_uids.extend(a[1]['uid']) for a in ex_users]
     tz = 'Europe/Paris'
     lang = 'fr_FR'
+    employee_skipped_properties = ['remaining_leaves']
     for user in users:
         if user not in ['admin'] + data.get('odoo_skipped_users', []):
             dn, udata = user
@@ -168,9 +171,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
             name = '{0} {1}'.format(_ms(firstname), _ms(lastname))
             active = True
             log.info(
-                '- On {0} {1}'.format(
-                    __salt__['mc_utils.magicstring'](firstname),
-                    __salt__['mc_utils.magicstring'](lastname)))
+                '- On {0} {1}'.format(_ms(firstname), _ms(lastname)))
             if tri in ex_uids:
                 active = False
             pdata = {'name': name,
@@ -195,6 +196,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
                      'password': None,
                      'password_crypt': None,
                      'company_id': company_id,
+                     'name': name,
                      'create_uid': 1,
                      'write_uid': 1,
                      'create_date': snow,
@@ -275,7 +277,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
                 try:
                     if (
                         uid and
-                        employee.get('user_id')[0] == uid and
+                        employee.get('user_id', [None])[0] == uid and
                         employee.get('active')
                     ):
                         eid = eeid
@@ -283,9 +285,11 @@ def ldap_sync(project='odoo', *p_a, **kw):
                 except (ValueError, TypeError, IndexError, AttributeError):
                     continue
             # create employee if not existing
+            employee_created = False
             if not eid:
                 log.info('Creating employee for {0}'.format(name))
                 eid = employees_obj.create(edata)
+                employee_created = True
             if not eid:
                 raise ValueError('no employee for {0}'.format(udata['name']))
             eobj = [a for a in employees_obj.browse([eid])][0]
@@ -332,16 +336,51 @@ def ldap_sync(project='odoo', *p_a, **kw):
                 (edata, sedata, synced_edata),
             ):
                 for i in [a for a in synced_data]:
+                    overwrite = False
                     if synced_data[i] != real_data[i]:
+                        overwrite = True
+                        try:
+                            if (
+                                isinstance(synced_data[i],
+                                           six.string_types) and
+                                isinstance(real_data[i], six.string_types) and
+                                (_ms(real_data[i]) == _ms(synced_data[i]))
+                            ):
+                                overwrite = False
+                        except Exception:
+                            pass
+                    if overwrite:
                         real_data[i] = synced_data[i]
                     else:
                         synced_data.pop(i, None)
-            if spdata['user_id'][0] != uid:
+            if spdata['user_id'] and spdata['user_id'][0] != uid:
                 synced_data['user_id'] = spdata['user_id'] = uid
-            if sodata['partner_id'][0] != pid:
+            if sodata['partner_id'] and sodata['partner_id'][0] != pid:
                 synced_data['partner_id'] = sodata['partner_id'] = pid
-            if (not sedata['user_id']) or (sedata['user_id'][0] != uid):
+            if (
+                employee_created and
+                ((not sedata['user_id']) or
+                 (sedata['user_id'][1] != uid))
+            ):
                 synced_edata['user_id'] = sedata['user_id'] = uid
+            for i in [a for a in employee_skipped_properties if a in sedata]:
+                sedata.pop(i, None)
+            # XXX: M2M are setted directly on employee & partner, do no mess
+            # the reverse as the orm breaks and dont resolve them
+            for i in [
+                # 'user_id',
+                # 'employee_id',
+                'user_ids',
+                'employee_ids'
+            ]:
+                sodata.pop(i, None)
+            for syncdata in [sodata, spdata, sedata]:
+                # workaround:
+                # ValueError: 'property_account_receivable' field is required
+                for i in [a for a in syncdata]:
+                    val = syncdata[i]
+                    if i.startswith('property_') and not val:
+                        syncdata.pop(i, None)
             if synced_pdata:
                 log.info('Updating partner: {0}'.format(pobj.id))
                 update_obj(oerp, pobj, spdata)
