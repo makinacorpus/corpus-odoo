@@ -21,6 +21,8 @@ makina-projects.projectname:
     wkhtml_ver: "0.12.0"
     wkhtml_arc: "wkhtmltox-linux-amd64_0.12.0-03c001d.tar.xz"
     wkhtml_url: "http://sourceforge.net/projects/wkhtmltopdf/files/archive/0.12.0/{wkhtml_arc}"
+    #ldap_binddn: 'uid=x,ou=People,dc=x,dc=x'
+    #ldap_binddn_passwd: 'x'
     odoo_port: 8069
     odoo_sport: 8071
     odoo_lpport: 8072
