@@ -85,6 +85,11 @@ def sanitized_data(data):
             isinstance(val[1], six.string_types)
         ):
             data[i] = val[0]
+        if (
+            i.endswith('id') or
+            i.endswith('ids')
+        ):
+            data.pop(i, None)
     return data
 
 
@@ -96,6 +101,7 @@ def update_obj(oerp, obj, data):
             setattr(obj, i, val)
         return oerp.write_record(obj)
     except Exception, ex:
+        import pdb;pdb.set_trace()  ## Breakpoint ##
         trace = traceback.format_exc()
         print(trace)
         raise
