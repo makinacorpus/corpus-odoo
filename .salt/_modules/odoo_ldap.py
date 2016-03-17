@@ -79,15 +79,15 @@ def sanitized_data(data):
     for i in [a for a in data]:
         val = data[i]
         if (
-            isinstance(val, list) and
+            isinstance(val, (list, tuple)) and
             len(val) == 2 and
             isinstance(val[0], int) and
             isinstance(val[1], six.string_types)
         ):
             data[i] = val[0]
         if (
-            i.endswith('id') or
-            i.endswith('ids')
+            (i.endswith('id') or i.endswith('ids')) and
+            i not in ['user_id', 'employee_ids']
         ):
             data.pop(i, None)
     return data
@@ -101,7 +101,6 @@ def update_obj(oerp, obj, data):
             setattr(obj, i, val)
         return oerp.write_record(obj)
     except Exception, ex:
-        import pdb;pdb.set_trace()  ## Breakpoint ##
         trace = traceback.format_exc()
         print(trace)
         raise
@@ -281,21 +280,33 @@ def ldap_sync(project='odoo', *p_a, **kw):
             for eeid, employee in six.iteritems(employees):
                 # search employee linked to user
                 try:
+
                     if (
                         uid and
-                        employee.get('user_id', [None])[0] == uid and
-                        employee.get('active')
+                        employee.get('user_id', [None])[0] == uid
                     ):
                         eid = eeid
                         break
                 except (ValueError, TypeError, IndexError, AttributeError):
                     continue
-            # create employee if not existing
             employee_created = False
+            # create employee if not existinga
             if not eid:
-                log.info('Creating employee for {0}'.format(name))
-                eid = employees_obj.create(edata)
+                if employees:
+                    for eeid, employee in six.iteritems(employees):
+                        if employee['user_id']:
+                            continue
+                        log.info('Reusing employee {1} for {0}'.format(name, eeid))
+                        eid = eeid
+                        synced_edata['user_id'] = (sodata['id'], name)
+                        edata['user_id'] = (None, None)
+                        break
+                if not eid:
+                    log.info('Creating employee for {0}'.format(name))
+                    eid = employees_obj.create(edata)
                 employee_created = True
+                edata['user_id'] = (None, None)
+                synced_edata['user_id'] = (sodata['id'], name)
             if not eid:
                 raise ValueError('no employee for {0}'.format(udata['name']))
             eobj = [a for a in employees_obj.browse([eid])][0]
@@ -366,7 +377,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
             if (
                 employee_created and
                 ((not sedata['user_id']) or
-                 (sedata['user_id'][1] != uid))
+                 (sedata['user_id'][0] != uid))
             ):
                 synced_edata['user_id'] = sedata['user_id'] = uid
             for i in [a for a in employee_skipped_properties if a in sedata]:
@@ -393,7 +404,18 @@ def ldap_sync(project='odoo', *p_a, **kw):
             if synced_edata:
                 log.info('Updating employee: {0}'.format(eobj.id))
                 update_obj(oerp, eobj, sedata)
+            sync_user_id = synced_edata.get('user_id', None)
+            # if synced_odata or sync_user_id:
             if synced_odata:
                 log.info('Updating user: {0}'.format(uobj.id))
+                # link is done via employee
+                # if sync_user_id:
+                #     log.info('Also linking with employee {0}'.format(sedata['id']))
+                #     eids = sodata.get('employee_ids', [])
+                #     if eids is None:
+                #         eids = []
+                #     if sedata['id'] not in eids:
+                #         eids.append(sedata['id'])
+                #         sodata['employee_ids'] = eids
                 update_obj(oerp, uobj, sodata)
 # vim:set et sts=4 ts=4 tw=80:
