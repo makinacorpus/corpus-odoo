@@ -37,7 +37,7 @@ include:
   file.managed:
     - name: /etc/cron.d/{{cfg.name}}_crons
     - contents: |
-                0 0 * * * root find {{data.odoo_data}}/odoo/sessions -type f -mtime +30  -delete >/dev/null 2>&1
+                0 0 * * * root find {{data.odoo_data}}/sessions -type f -mtime +30  -delete >/dev/null 2>&1
     - mode: 600
     - user: root
     - group: root
