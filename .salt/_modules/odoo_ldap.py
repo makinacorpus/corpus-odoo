@@ -147,6 +147,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
     tz = 'Europe/Paris'
     lang = 'fr_FR'
     employee_skipped_properties = ['remaining_leaves']
+    users.reverse()
     for user in users:
         if user not in ['admin'] + data.get('odoo_skipped_users', []):
             dn, udata = user
@@ -225,7 +226,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
             sodata, uobj, uid = None, None, None
             try:
                 uid = users_obj.search(
-                    [('login', 'ilike', udata['uid'][0]),
+                    [('login', '=ilike', udata['uid'][0]),
                      ('active', 'in', [True, None, False])])[0]
             except IndexError:
                 uid = None
@@ -233,7 +234,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
                     for m in mails:
                         try:
                             uid = users_obj.search([
-                                ('login', 'ilike', m),
+                                ('login', '=ilike', m),
                                 ('active', 'in', [True, None, False])])[0]
                             break
                         except IndexError:
@@ -242,8 +243,9 @@ def ldap_sync(project='odoo', *p_a, **kw):
                     if uid is None:
                         raise IndexError('')
                 except IndexError:
-                    uid = users_obj.create(odata)
                     log.info('Creating user for {0}'.format(name))
+                    odata['company_ids'] = [odata['company_id']]
+                    uid = users_obj.create(odata)
             uobj = [a for a in users_obj.browse([uid])][0]
             sodata = [a for a in users_obj.read([uid])][0]
             # search employee
@@ -251,7 +253,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
             employees = {}
             try:
                 for e in employees_obj.search(
-                    [('login', 'ilike', udata['uid'][0]),
+                    [('login', '=ilike', udata['uid'][0]),
                      ('active', 'in', [True, None, False])]
                 ):
                     employees[e] = None
@@ -267,7 +269,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
                 try:
                     for e in employees_obj.search([
                         ('active', 'in', [True, None, False]),
-                        ('work_email', 'ilike', m)
+                        ('work_email', '=ilike', m)
                     ]):
                         employees[e] = None
                 except IndexError:
@@ -296,7 +298,8 @@ def ldap_sync(project='odoo', *p_a, **kw):
                     for eeid, employee in six.iteritems(employees):
                         if employee['user_id']:
                             continue
-                        log.info('Reusing employee {1} for {0}'.format(name, eeid))
+                        log.info(
+                            'Reusing employee {1} for {0}'.format(name, eeid))
                         eid = eeid
                         synced_edata['user_id'] = (sodata['id'], name)
                         edata['user_id'] = (None, None)
@@ -367,6 +370,7 @@ def ldap_sync(project='odoo', *p_a, **kw):
                         except Exception:
                             pass
                     if overwrite:
+                        if synced_data[i] == 'rle':
                         real_data[i] = synced_data[i]
                     else:
                         synced_data.pop(i, None)
