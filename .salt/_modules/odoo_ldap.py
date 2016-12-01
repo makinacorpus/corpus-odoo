@@ -370,7 +370,6 @@ def ldap_sync(project='odoo', *p_a, **kw):
                         except Exception:
                             pass
                     if overwrite:
-                        if synced_data[i] == 'rle':
                         real_data[i] = synced_data[i]
                     else:
                         synced_data.pop(i, None)
