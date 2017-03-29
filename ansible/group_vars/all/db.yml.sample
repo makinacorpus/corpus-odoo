@@ -1,0 +1,3 @@
+---
+prod_url: "postgres://odoo_prod:xxx@10.2.0.1/odoo_prod"
+staging_url: "postgres://odoo_preprod:xxx@10.2.0.1/odoo_preprod"

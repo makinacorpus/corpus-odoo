@@ -1,0 +1,100 @@
+---
+# Reconstruct the staging host from a prod dump
+# see :
+#  - ./group_vars/all/vars.yml
+#  - ./group_vars/all/db.yml.sample
+#  - inventory.sample
+- {hosts: all, roles: [corpusops.humanlog]}
+- hosts: prod
+  tasks:
+    - shell: |
+        cd {{project}}
+        git log HEAD|head -n1|awk '{print $2}'
+      register: odoo_commit
+    - {set_fact: {odoo_commit: "{{odoo_commit.stdout.strip()}}"}}
+    - shell: |
+        set -xe
+        pg_dump "{{prod_db_url}}" > /tmp/dump.sql
+        sed -i -r \
+           -e "/ row_security =/d" \
+           -e "s/{{prod_db}}/{{staging_db}}/g" \
+           -e "s/{{prod_name}}/{{staging_name}}/g" \
+           -e "s/{{prod}}/{{staging}}/g" \
+           /tmp/dump.sql
+      tags: [db, dump_db]
+- hosts: staging
+  tasks:
+    - args: {executable: bash}
+      tags: [service, service_stop]
+      shell: |
+        set -x
+        if [[ -n $(pgrep circus) ]];then
+          service circusd stop
+        fi
+        pids=$(pgrep -f "^python.*odoo.*openerp")
+        if [[ -n $pids ]];then
+          echo killing leftover odoo processes
+          for i in $pids;do
+            ps afux|grep $i
+            kill -9 $i || /bin/true
+          done
+        fi
+- hosts: prod
+  tasks:
+    - args: {executable: bash}
+      tags: [db, reset_db]
+      shell: |
+        set -ex
+        echo "\
+        drop schema public cascade;
+        create schema public;
+        CREATE EXTENSION fuzzystrmatch;
+        alter schema public owner to {{staging_db}};"\
+        | psql -v ON_ERROR_STOP=1 "{{staging_db_url}}"
+    - args: {executable: bash}
+      tags: [db, load_db]
+      register: load_db
+      shell: |
+        set -ex
+        psql "{{staging_db_url}}" -f /tmp/dump.sql
+- hosts: staging
+  tasks:
+    - tags: [code, sync_code]
+      synchronize:
+        compress: false
+        src: "{{project}}/{{item}}"
+        dest: "{{project}}/{{item}}"
+        rsync_opts: ['-a', '-z', '-v', '--delete']
+      with_items: [.git/, src/odoo/, venv/]
+      delegate_to: "{{prod}}"
+    - shell: |
+             set -ex
+             cd {{project}}
+             git reset --hard "{{hostvars[prod]['odoo_commit']}}"
+      tags: [code, reset_project_code]
+- hosts: staging
+  tasks:
+    - tags: [data, sync_addons]
+      synchronize:
+        compress: false
+        src: '{{data}}/{{item}}'
+        dest: '{{data}}/{{item}}'
+        rsync_opts: ['-a', '-z', '-v', '--delete']
+      delegate_to: "{{prod}}"
+      with_items: [addons_repos/,  odoo/addons/]
+    - tags: [data, sync_files]
+      synchronize:
+        compress: false
+        src: "{{data}}/odoo/filestore/{{prod_db}}/"
+        dest: "{{data}}/odoo/filestore/{{staging_db}}/"
+        rsync_opts: ['-a', '-z', '-v']
+      delegate_to: "{{prod}}"
+- hosts: staging
+  tasks:
+    - args: {executable: bash}
+      tags: [service, service_start]
+      shell: |
+        set -x
+        if [[ -z $(pgrep circus) ]];then
+          service circusd start
+        fi

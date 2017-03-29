@@ -1,4 +1,5 @@
 *pyc
+*retry
 /cache
 /venv/
 /develop_eggs/
@@ -8,3 +9,5 @@
 /lib/
 /dist/
 !/.salt
+/ansible/group_vars/all/db.yml
+/ansible/inventory
