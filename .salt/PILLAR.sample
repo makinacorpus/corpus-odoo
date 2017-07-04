@@ -14,13 +14,13 @@
 makina-projects.projectname:
   data:
     {# new deb version is not working ! #}
-    #wkhtml_ver: "0.12.2.1"
-    #wkhtml_suf: "_linux-trusty-amd64"
-    #wkhtml_arc: "wkhtmltox-{wkhtml_ver}{wkhtml_suf}.deb"
-    #wkhtml_url: "http://downloads.sourceforge.net/project/wkhtmltopdf/{wkhtml_ver}/{wkhtml_deb}"
+    sync_enabled: true
+    use_vt: false
     wkhtml_ver: "0.12.0"
-    wkhtml_arc: "wkhtmltox-linux-amd64_0.12.0-03c001d.tar.xz"
-    wkhtml_url: "http://sourceforge.net/projects/wkhtmltopdf/files/archive/0.12.0/{wkhtml_arc}"
+    #wkhtml_arc: "wkhtmltox-{wkhtml_ver}.tar.bz2"
+    #wkhtml_arc: "wkhtmltox-{wkhtml_ver}_linux-generic-amd64.tar.xz"
+    wkhtml_arc: "wkhtmltox-linux-amd64_{wkhtml_ver}-03c001d.tar.xz"
+    wkhtml_url: "https://github.com/makinacorpus/odoo/releases/download/files/{wkhtml_arc}"
     #ldap_binddn: 'uid=x,ou=People,dc=x,dc=x'
     #ldap_binddn_passwd: 'x'
     odoo_port: 8069
@@ -35,9 +35,11 @@ makina-projects.projectname:
     domain: "{fqdn}"
     odoo_rev: "8.0"
     shell_env: {}
+    #orig_py: /usr/bin/python3
     py: "{py_root}/bin/python"
     py_root: "{project_root}/venv"
-    requirements: "{project_root}/requirements.txt"
+    pip_root: "{project_root}"
+    requirements: "{project_root}/requirements.{odoo_rev}.txt"
     server_aliases: []
     nginx_upstreams: salt://makina-projects/{name}/files/nginx.upstreams.conf
     nginx_vhost: salt://makina-projects/{name}/files/nginx.content.conf
@@ -79,7 +81,9 @@ makina-projects.projectname:
                   {{salt['mc_utils.json_dump'](addons_repos)}}
     config:
       options:
-        addons_path: "{% for i in addons_repos%}{data_root}/addons_repos/{{i}},{%endfor%}{data_root}/addons,{project_root}/src/odoo/openerp/addons,{project_root}/src/odoo/addons"
+        addons_path_extra: "{% for i in addons_repos%}{data_root}/addons_repos/{{i}},{%endfor%}{data_root}/addons"
+        addons_path_core_8.0: "{project_root}/src/odoo/openerp/addons,{project_root}/src/odoo/addons"
+        addons_path_core_10.0: "{project_root}/src/odoo/odoo/addons,{project_root}/src/odoo/addons"
         admin_passwd: "{admin_password}"
         auto_reload: "False"
         csv_internal_sep: ","

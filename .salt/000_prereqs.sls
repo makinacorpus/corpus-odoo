@@ -1,10 +1,11 @@
 {%- import "makina-states/services/db/postgresql/hooks.sls" as hooks with context %}
 {% set cfg = opts.ms_project %}
 {% set data = cfg.data %}
+{% set orig_py = data.get('orig_py', None) %}
 include:
   - makina-states.localsettings.nodejs
   - makina-states.services.db.postgresql.client
-  - makina-states.localsettings.npm
+  - makina-states.localsettings.nodejs
 
 {{cfg.name}}-htaccess:
   file.managed:
@@ -43,6 +44,9 @@ prepreqs-{{cfg.name}}:
       - user: {{cfg.name}}-www-data
       - mc_proxy: {{hooks.orchestrate['base']['postpkg']}}
     - pkgs:
+      - libsasl2-dev
+      - libldap2-dev
+      - alien
       - sqlite3
       - liblcms2-2
       - liblcms2-dev
@@ -77,7 +81,6 @@ prepreqs-{{cfg.name}}:
       - libxml2-dev
       - libxslt1-dev
       - libopenjpeg-dev
-      - libopenjpeg2
       - m4
       - man-db
       - pkg-config
@@ -99,6 +102,12 @@ prepreqs-{{cfg.name}}:
       - libgeos-dev
       - geoip-bin
       - libgeoip-dev
+      # py3
+      {% if orig_py and ("3" in data.orig_py) %}
+      - libpython3-dev
+      - python3
+      - python3-dev
+      {% endif %}
 
 {{cfg.name}}-dl-odoo:
   mc_git.latest:
@@ -130,7 +139,10 @@ prepreqs-{{cfg.name}}:
               set -e
               test -e /usr/lib/node_modules/less-plugin-clean-css
               test -e /usr/lib/node_modules/less
-    - name: npm install -g less less-plugin-clean-css
+    - name: |
+            npm install -g less less-plugin-clean-css
+            ln -sf /srv/apps/nodejs-7.10.0/bin/lessc /usr/local/bin/lessc
+
 
 {% if data.get('addons_repos', []) %}
 {% for i, cdata in salt['mc_utils.json_load'](data.addons_repos).items() %}
@@ -146,32 +158,3 @@ prepreqs-{{cfg.name}}:
       - file: {{cfg.name}}-dirs
 {% endfor %}
 {% endif %}
-
-
-{# NEW VERSION IS NOT WORKING YET #}
-{{cfg.name}}-html:
-  cmd.run:
-    - unless: set -x;which wkhtmltopdf && test "x$(wkhtmltopdf --version|head -n 3|grep wkhtml|awk '{print $2}')" = "x{{data.wkhtml_ver}}"
-    - name: |
-            set -e
-            set -x
-            export DPKG_FRONTEND="non-interactive"
-            apt-get install -y --force-yes xfonts-75dpi
-            # install deps
-            apt-get install -y --force-yes wkhtmltopdf
-            apt-get remove -y --force-yes  wkhtmltopdf
-            cd /tmp
-            if [ -e "{{data.wkhtml_arc}}" ];then rm -f "{{data.wkhtml_arc}}";fi
-            wget -c "{{data.wkhtml_url}}"
-            {% if data.wkhtml_url.endswith('deb') %}
-            dpkg -i "{{deb}}"
-            apt-get -f install
-            {% else %}
-            tar xvf "{{data.wkhtml_arc}}"
-            cd /tmp/wkhtmltox
-            rm -f wkhtmltox*deb
-            tar czvf ../wkhtmltox.tar.gz .
-            alien --to-deb ../wkhtmltox.tar.gz
-            dpkg -i wkhtmltox*deb
-            {% endif%}
-    - use_vt: true

@@ -3,7 +3,7 @@
 {% set data = cfg.data %}
 
 include:
-  - makina-states.services.monitoring.circus 
+  - makina-states.services.monitoring.circus
 
 {% for config, cdata in data.configs.items() %}
 {% set config = salt['mc_utils.format_resolve'](config, cfg) %}

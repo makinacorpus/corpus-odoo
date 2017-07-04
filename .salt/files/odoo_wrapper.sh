@@ -3,4 +3,8 @@
 {%- set data = cfg.data %}
 . "{{data.py_root}}/bin/activate"
 cd "{{cfg.project_root}}/src/odoo"
-exec ./odoo.py --config="{{cfg.data_root}}/openerp_rc" "${@}"
+if [ -e odoo-bin ];then
+    exec ./odoo-bin --config="{{cfg.data_root}}/openerp_rc" "${@}"
+else
+    exec ./odoo.py --config="{{cfg.data_root}}/openerp_rc" "${@}"
+fi

@@ -3,6 +3,7 @@
 {% set data = cfg.data %}
 
 
+{% if data.sync_enabled %}
 {{cfg.name}}-install-api:
   cmd.run:
     - name: /srv/makina-states/venv/salt/bin/pip install "OERPLib==0.8.4"
@@ -16,4 +17,8 @@
     - user: root
     - group: root
     - mode: 050
- 
+{% else %}
+{{cfg.name}}-cron:
+  file.absent:
+    - name: "/etc/cron.d/{{cfg.name}}ldap_cron"
+{% endif %}
