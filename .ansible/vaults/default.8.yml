@@ -1,0 +1,52 @@
+---
+# Remember to encrypt your vault with ansible-vault for non public env
+makinastates_pillar: |
+  ---
+  {% set version = '8.0' %}
+  {% set project_name = 'odoo' %}
+  {% if not grains %}{% set grains = {} %}{% endif %}
+  {% set fqdn = grains.get('fqdn', '{0}.local'.format(project_name)) %}
+  {% set domains = [fqdn,
+                    "{1}.{0}".format(fqdn, project_name),
+                    "www.{0}".format(fqdn)] %}
+  {% set addons_repos = {
+        "bank-payment": {
+          "url": "https://github.com/OCA/bank-payment.git", 
+          "rev": version},
+        "bank-statement-import": {
+          "url": "https://github.com/OCA/bank-statement-import.git", 
+          "rev": version},
+        "bank-statement-reconcile": {
+          "url": "https://github.com/OCA/bank-statement-reconcile.git", 
+          "rev": version},
+  } %}
+  makina-projects.{{project_name}}:
+    api_version: '2'
+    data:
+      domain: {{domains[0]}}
+      server_aliases: {{domains[1:]}}
+      ldap_url: "ldap://ldap.makina-corpus.net"
+      #ldap_auth: "{ldap_url}/dc=mcjam,dc=org?uid?sub?(objectClass=person)"
+      ldap_users_filter: "(&(objectClass=person)(memberof=cn=makina-people,ou=group,dc=mcjam,dc=org))"
+      ldap_ex_users_filter: "(&(objectClass=person)(memberof=cn=makina-ex,ou=group,dc=mcjam,dc=org))"
+      ldap_users_base: "dc=mcjam,dc=org"
+      ldap_reader: "uid=odoo,ou=People,dc=mcjam,dc=org"
+      ldap_reader_pw: "secretldap"
+      odoo_api: "localhost"
+      odoo_port: 8069
+      odoo_sport: 8071
+      odoo_lpport: 8072
+      odoo_skipped_users: []
+      odoo_proto: "xmlrpc"
+      odoo_town: "Toulouse"
+      odoo_company_id: 1
+      psql_url: "postgres://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+      db_host: "127.0.0.1"
+      db_name: "odoo"
+      odoo_base: "odoo"
+      db_password: "secret"
+      db_port: "5432"
+      db_user: "odoo"
+      addons_repos: |
+         {{salt['mc_utils.json_dump'](addons_repos)}}
+# vim: set ft=sls:
