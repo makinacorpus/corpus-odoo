@@ -1,0 +1,8 @@
+---
+origin_url: "postgres://odoo_origin:xxx@10.2.0.1/odoo_origin"
+destination_url: "postgres://odoo_preprod:xxx@10.2.0.1/odoo_preprod"
+origin_name: odoo.foo.net
+destination_name: stagingodoo.foo.net
+origin_db: o
+destination_db: p
+# vim: set ft=sls:

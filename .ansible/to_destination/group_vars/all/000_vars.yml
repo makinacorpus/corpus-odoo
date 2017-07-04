@@ -1,0 +1,14 @@
+---
+projectd: "/srv/projects/odoo"
+project: "{{projectd}}/project"
+data:  "{{projectd}}/data"
+
+origin: "{{groups['origin'][0]}}"
+origin_name: odoo.foo.net
+origin_url: "postgres://odoo_origin:xxx@pgsql/{{origin_db}}"
+origin_db: odoo_prod
+
+destination: "{{groups['destination'][0]}}"
+destination_name: stagingodoo.foo.net
+destination_url: "postgres://odoo_preprod:xxx@pgsql/{{destination_db}}"
+destination_db: odoo_pprod

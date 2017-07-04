@@ -1,5 +1,7 @@
-[staging]
+
+[origin]
 staging-foo.foo.net
 
-[prod]
+[destination]
 prod-foo.foo.net ansible_connection=local
+

@@ -9,5 +9,7 @@
 /lib/
 /dist/
 !/.salt
-/ansible/group_vars/all/db.yml
-/ansible/inventory
+.ansible/**/*all/100_overrides.yml
+.ansible/**/*/group_vars/**/*/db.yml
+.ansible/**/*/inventory
+/local
